@@ -1,19 +1,20 @@
-const VERSION="v0.8";
+const VERSION="v0.9-debug";
 
+// ===== CONFIG =====
 const SCALE=4;
-const SPEED=3.2;
+const SPEED=3;
 const MOUSE=0.002;
 const PLAYER_RADIUS=0.6;
 
-// ===== UI VERSION =====
-const v=document.createElement("div");
-v.style.position="fixed";
-v.style.top="5px";
-v.style.right="10px";
-v.style.color="white";
-v.style.fontFamily="monospace";
-v.innerText=VERSION;
-document.body.appendChild(v);
+// ===== UI =====
+const label=document.createElement("div");
+label.style.position="fixed";
+label.style.top="5px";
+label.style.right="10px";
+label.style.color="white";
+label.style.fontFamily="monospace";
+label.innerText=VERSION;
+document.body.appendChild(label);
 
 // ===== SCENE =====
 const scene=new THREE.Scene();
@@ -25,14 +26,13 @@ renderer.setSize(innerWidth,innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // ===== LIGHT =====
-scene.add(new THREE.AmbientLight(0xffffff,0.45));
-const dl=new THREE.DirectionalLight(0xffffff,0.6);
+scene.add(new THREE.AmbientLight(0xffffff,0.5));
+const dl=new THREE.DirectionalLight(0xffffff,0.7);
 dl.position.set(10,20,10);
 scene.add(dl);
 
 // ===== TEXTURES =====
 const loader=new THREE.TextureLoader();
-
 const wallTex=loader.load("https://threejs.org/examples/textures/brick_diffuse.jpg");
 wallTex.wrapS=wallTex.wrapT=THREE.RepeatWrapping;
 
@@ -42,30 +42,26 @@ floorTex.repeat.set(20,20);
 
 // ===== MAZE =====
 const maze=[
-[1,1,1,1,1,1,1,1,1,1],
-[1,0,0,0,1,0,0,0,0,1],
-[1,0,1,0,1,0,1,1,0,1],
-[1,0,1,0,0,0,0,1,0,1],
-[1,0,1,1,1,1,0,1,0,1],
-[1,0,0,0,0,1,0,1,0,1],
-[1,1,1,1,0,1,0,1,0,1],
-[1,0,0,1,0,0,0,1,0,1],
-[1,0,0,0,0,1,0,0,0,1],
-[1,1,1,1,1,1,1,1,1,1]
+[1,1,1,1,1,1,1,1],
+[1,0,0,0,0,0,0,1],
+[1,0,1,1,0,1,0,1],
+[1,0,0,0,0,1,0,1],
+[1,0,1,0,0,0,0,1],
+[1,0,1,0,1,1,0,1],
+[1,0,0,0,0,0,0,1],
+[1,1,1,1,1,1,1,1]
 ];
 
-// ===== BUILD MAZE =====
+// ===== BUILD =====
 const wallGeo=new THREE.BoxGeometry(SCALE,SCALE,SCALE);
 const wallMat=new THREE.MeshStandardMaterial({map:wallTex});
 
-for(let z=0;z<maze.length;z++){
-for(let x=0;x<maze[z].length;x++){
- if(maze[z][x]){
-  const m=new THREE.Mesh(wallGeo,wallMat);
-  m.position.set(x*SCALE,SCALE/2,z*SCALE);
-  scene.add(m);
- }
-}
+for(let z=0;z<maze.length;z++)
+for(let x=0;x<maze[z].length;x++)
+if(maze[z][x]){
+ const m=new THREE.Mesh(wallGeo,wallMat);
+ m.position.set(x*SCALE,SCALE/2,z*SCALE);
+ scene.add(m);
 }
 
 // floor
@@ -81,22 +77,29 @@ floor.position.set(
 );
 scene.add(floor);
 
-// ===== SPAWN CENTER SAFE =====
-function findSpawn(){
+// ===== SPAWN =====
+function spawn(){
  for(let z=0;z<maze.length;z++)
  for(let x=0;x<maze[z].length;x++)
  if(maze[z][x]===0)
  return {x:x*SCALE,z:z*SCALE};
 }
-const spawn=findSpawn();
-camera.position.set(spawn.x,1.7,spawn.z);
+const sp=spawn();
+camera.position.set(sp.x,1.7,sp.z);
 
 // ===== INPUT =====
 const keys={};
-addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
-addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 
-// ===== MOUSE LOOK =====
+addEventListener("keydown",e=>{
+ keys[e.key.toLowerCase()]=true;
+ console.log("KEYDOWN",e.key);
+});
+
+addEventListener("keyup",e=>{
+ keys[e.key.toLowerCase()]=false;
+});
+
+// ===== MOUSE =====
 let yaw=0;
 let pitch=0;
 
@@ -105,9 +108,8 @@ document.body.onclick=()=>document.body.requestPointerLock();
 addEventListener("mousemove",e=>{
  if(document.pointerLockElement!==document.body) return;
 
- yaw -= e.movementX*MOUSE;
- pitch -= e.movementY*MOUSE;
-
+ yaw-=e.movementX*MOUSE;
+ pitch-=e.movementY*MOUSE;
  pitch=Math.max(-Math.PI/2,Math.min(Math.PI/2,pitch));
 
  camera.rotation.order="YXZ";
@@ -120,33 +122,29 @@ function wallAt(x,z){
  const gx=Math.floor(x/SCALE);
  const gz=Math.floor(z/SCALE);
  if(gx<0||gz<0||gz>=maze.length||gx>=maze[0].length) return true;
- return maze[gz][gx]===1;
+ return maze[gz][gx];
 }
 
-function canMove(nx,nz){
- const r=PLAYER_RADIUS;
-
- return !(
- wallAt(nx+r,nz+r)||
- wallAt(nx-r,nz+r)||
- wallAt(nx+r,nz-r)||
- wallAt(nx-r,nz-r)
- );
+function canMove(x,z){
+ return !wallAt(x,z);
 }
 
 // ===== SOUND =====
 const step=new Audio("https://cdn.jsdelivr.net/gh/jshawl/AudioFX/footstep.wav");
-step.volume=0.2;
 
-// ===== MOVE =====
+// ===== LOOP =====
 const clock=new THREE.Clock();
 
 function move(){
+
  const dt=clock.getDelta();
 
  let f=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0);
  let s=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);
- if(!f && !s) return;
+
+ if(f===0 && s===0) return;
+
+ console.log("INPUT",f,s);
 
  const forward=new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw));
  const right=new THREE.Vector3(forward.z,0,-forward.x);
@@ -154,10 +152,15 @@ function move(){
  const move=new THREE.Vector3();
  move.addScaledVector(forward,f);
  move.addScaledVector(right,s);
+
+ if(move.length()===0) return;
+
  move.normalize();
 
  const nx=camera.position.x + move.x*SPEED*dt;
  const nz=camera.position.z + move.z*SPEED*dt;
+
+ console.log("TRY",nx,nz);
 
  if(canMove(nx,nz)){
   camera.position.x=nx;
@@ -165,12 +168,11 @@ function move(){
 
   if(step.paused){
    step.currentTime=0;
-   step.play();
+   step.play().catch(()=>{});
   }
  }
 }
 
-// ===== LOOP =====
 function loop(){
  requestAnimationFrame(loop);
  move();
