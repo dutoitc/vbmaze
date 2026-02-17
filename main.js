@@ -23,6 +23,7 @@ scene.background=new THREE.Color(0x050510);
 const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,1000);
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth,innerHeight);
+document.body.style.margin="0";
 document.body.appendChild(renderer.domElement);
 
 // ===== LIGHT =====
@@ -56,34 +57,41 @@ const maze=[
 const wallGeo=new THREE.BoxGeometry(SCALE,SCALE,SCALE);
 const wallMat=new THREE.MeshStandardMaterial({map:wallTex});
 
-for(let z=0;z<maze.length;z++)
-for(let x=0;x<maze[z].length;x++)
-if(maze[z][x]){
- const m=new THREE.Mesh(wallGeo,wallMat);
- m.position.set(x*SCALE,SCALE/2,z*SCALE);
- scene.add(m);
+for(let z=0;z<maze.length;z++){
+  for(let x=0;x<maze[z].length;x++){
+    if(maze[z][x]){
+      const m=new THREE.Mesh(wallGeo,wallMat);
+      m.position.set(x*SCALE + SCALE/2, SCALE/2, z*SCALE + SCALE/2);
+      scene.add(m);
+    }
+  }
 }
 
 // floor
 const floor=new THREE.Mesh(
- new THREE.PlaneGeometry(maze[0].length*SCALE,maze.length*SCALE),
- new THREE.MeshStandardMaterial({map:floorTex})
+  new THREE.PlaneGeometry(maze[0].length*SCALE,maze.length*SCALE),
+  new THREE.MeshStandardMaterial({map:floorTex})
 );
 floor.rotation.x=-Math.PI/2;
 floor.position.set(
- maze[0].length*SCALE/2 - SCALE/2,
- 0,
- maze.length*SCALE/2 - SCALE/2
+  maze[0].length*SCALE/2,
+  0,
+  maze.length*SCALE/2
 );
 scene.add(floor);
 
-// ===== SPAWN =====
+// ===== SPAWN (FIXED: CENTER OF TILE) =====
 function spawn(){
- for(let z=0;z<maze.length;z++)
- for(let x=0;x<maze[z].length;x++)
- if(maze[z][x]===0)
- return {x:x*SCALE,z:z*SCALE};
+  for(let z=0;z<maze.length;z++){
+    for(let x=0;x<maze[z].length;x++){
+      if(maze[z][x]===0){
+        return {x:x*SCALE + SCALE/2, z:z*SCALE + SCALE/2};
+      }
+    }
+  }
+  return {x:SCALE/2, z:SCALE/2};
 }
+
 const sp=spawn();
 camera.position.set(sp.x,1.7,sp.z);
 
@@ -91,13 +99,13 @@ camera.position.set(sp.x,1.7,sp.z);
 const keys={};
 
 addEventListener("keydown",e=>{
- keys[e.key.toLowerCase()]=true;
- console.log("DOWN",e.key);
+  keys[e.key.toLowerCase()]=true;
+  console.log("DOWN",e.key);
 });
 
 addEventListener("keyup",e=>{
- keys[e.key.toLowerCase()]=false;
- console.log("UP",e.key);
+  keys[e.key.toLowerCase()]=false;
+  console.log("UP",e.key);
 });
 
 // ===== MOUSE =====
@@ -107,99 +115,86 @@ let pitch=0;
 document.body.onclick=()=>document.body.requestPointerLock();
 
 addEventListener("mousemove",e=>{
- if(document.pointerLockElement!==document.body) return;
+  if(document.pointerLockElement!==document.body) return;
 
- yaw-=e.movementX*MOUSE;
- pitch-=e.movementY*MOUSE;
- pitch=Math.max(-Math.PI/2,Math.min(Math.PI/2,pitch));
+  yaw-=e.movementX*MOUSE;
+  pitch-=e.movementY*MOUSE;
+  pitch=Math.max(-Math.PI/2,Math.min(Math.PI/2,pitch));
 
- camera.rotation.order="YXZ";
- camera.rotation.y=yaw;
- camera.rotation.x=pitch;
+  camera.rotation.order="YXZ";
+  camera.rotation.y=yaw;
+  camera.rotation.x=pitch;
 });
 
 // ===== COLLISION =====
 function wallAt(x,z){
- const gx=Math.floor(x/SCALE);
- const gz=Math.floor(z/SCALE);
- if(gx<0||gz<0||gz>=maze.length||gx>=maze[0].length) return true;
- return maze[gz][gx];
+  const gx=Math.floor(x/SCALE);
+  const gz=Math.floor(z/SCALE);
+  if(gx<0||gz<0||gz>=maze.length||gx>=maze[0].length) return true;
+  return maze[gz][gx];
 }
 
 function canMove(x,z){
- return !(
-  wallAt(x-PLAYER_RADIUS,z-PLAYER_RADIUS)||
-  wallAt(x+PLAYER_RADIUS,z-PLAYER_RADIUS)||
-  wallAt(x-PLAYER_RADIUS,z+PLAYER_RADIUS)||
-  wallAt(x+PLAYER_RADIUS,z+PLAYER_RADIUS)
- );
+  return !(
+    wallAt(x-PLAYER_RADIUS,z-PLAYER_RADIUS)||
+    wallAt(x+PLAYER_RADIUS,z-PLAYER_RADIUS)||
+    wallAt(x-PLAYER_RADIUS,z+PLAYER_RADIUS)||
+    wallAt(x+PLAYER_RADIUS,z+PLAYER_RADIUS)
+  );
 }
 
 // ===== LOOP =====
 const clock=new THREE.Clock();
 
 function move(){
+  const dt=clock.getDelta();
 
- const dt=clock.getDelta();
+  const f=(keys.w||keys.z||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0);
+  const s=(keys.d||keys.arrowright?1:0)-(keys.a||keys.q||keys.arrowleft?1:0);
 
- const forwardKey =
- keys.w||keys.z||keys.arrowup;
+  if(f===0 && s===0) return;
 
- const backKey =
- keys.s||keys.arrowdown;
+  console.log("INPUT",f,s);
 
- const leftKey =
- keys.a||keys.q||keys.arrowleft;
+  const forward=new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw));
+  const right=new THREE.Vector3(forward.z,0,-forward.x);
 
- const rightKey =
- keys.d||keys.arrowright;
+  const mv=new THREE.Vector3();
+  mv.addScaledVector(forward,f);
+  mv.addScaledVector(right,s);
 
- let f = (forwardKey?1:0) - (backKey?1:0);
- let s = (rightKey?1:0) - (leftKey?1:0);
+  if(mv.lengthSq()===0){
+    console.log("ZERO VECTOR");
+    return;
+  }
 
- console.log("INPUT",f,s);
+  mv.normalize();
 
- if(f===0 && s===0) return;
+  const nx=camera.position.x + mv.x*SPEED*dt;
+  const nz=camera.position.z + mv.z*SPEED*dt;
 
- const forward=new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw));
- const right=new THREE.Vector3(forward.z,0,-forward.x);
+  console.log("TRY",nx,nz);
 
- const move=new THREE.Vector3();
- move.addScaledVector(forward,f);
- move.addScaledVector(right,s);
-
- if(move.lengthSq()===0){
- console.log("ZERO VECTOR");
- return;
- }
-
- move.normalize();
-
- const nx=camera.position.x + move.x*SPEED*dt;
- const nz=camera.position.z + move.z*SPEED*dt;
-
- console.log("TRY",nx,nz);
-
- if(canMove(nx,nz)){
- camera.position.x=nx;
- camera.position.z=nz;
- console.log("MOVE OK");
- }else{
- console.log("BLOCKED");
- }
+  if(canMove(nx,nz)){
+    camera.position.x=nx;
+    camera.position.z=nz;
+    console.log("MOVE OK");
+  } else {
+    console.log("BLOCKED");
+  }
 }
 
 function loop(){
- requestAnimationFrame(loop);
- move();
- renderer.render(scene,camera);
+  requestAnimationFrame(loop);
+  move();
+  renderer.render(scene,camera);
 }
 loop();
 
 // ===== RESIZE =====
 addEventListener("resize",()=>{
- camera.aspect=innerWidth/innerHeight;
- camera.updateProjectionMatrix();
- renderer.setSize(innerWidth,innerHeight);
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
 });
 
