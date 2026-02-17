@@ -1,10 +1,10 @@
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x000000);
+scene.background = new THREE.Color(0x202020);
 
 const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
 camera.position.set(1.5,1.6,1.5);
 
-const renderer = new THREE.WebGLRenderer();
+const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth, innerHeight);
 document.body.appendChild(renderer.domElement);
 
@@ -14,21 +14,18 @@ window.addEventListener("resize",()=>{
  renderer.setSize(innerWidth,innerHeight);
 });
 
-const ambient = new THREE.AmbientLight(0xffffff,0.6);
-scene.add(ambient);
+scene.add(new THREE.AmbientLight(0xffffff,1));
 
-const light = new THREE.DirectionalLight(0xffffff,0.8);
-light.position.set(5,10,7);
+const light = new THREE.DirectionalLight(0xffffff,1);
+light.position.set(10,20,10);
 scene.add(light);
 
 const floor = new THREE.Mesh(
  new THREE.PlaneGeometry(50,50),
- new THREE.MeshStandardMaterial({color:0x333333})
+ new THREE.MeshBasicMaterial({color:0x444444})
 );
 floor.rotation.x = -Math.PI/2;
 scene.add(floor);
-
-const wallMat = new THREE.MeshStandardMaterial({color:0x00ffaa});
 
 const maze = [
  [1,1,1,1,1,1,1,1],
@@ -48,7 +45,7 @@ maze.forEach((row,z)=>{
   if(cell){
    const wall = new THREE.Mesh(
     new THREE.BoxGeometry(1,2,1),
-    wallMat
+    new THREE.MeshBasicMaterial({color:0x00ff00})
    );
    wall.position.set(x,1,z);
    scene.add(wall);
@@ -76,15 +73,11 @@ document.body.addEventListener("mousemove",e=>{
   pitch = Math.max(-Math.PI/2,Math.min(Math.PI/2,pitch));
  }
 });
-
 document.body.addEventListener("click",()=>document.body.requestPointerLock());
 
 function canMove(x,z){
  for(const w of walls){
-  if(
-   Math.abs(w.position.x - x) < 0.6 &&
-   Math.abs(w.position.z - z) < 0.6
-  ){
+  if(Math.abs(w.position.x-x)<0.6 && Math.abs(w.position.z-z)<0.6){
    return false;
   }
  }
@@ -95,7 +88,7 @@ function checkGoal(){
  const dx = camera.position.x - goal.position.x;
  const dz = camera.position.z - goal.position.z;
  if(Math.sqrt(dx*dx + dz*dz) < 0.6){
-  alert("YOU ESCAPED THE MAZE");
+  alert("YOU ESCAPED");
   camera.position.set(1.5,1.6,1.5);
  }
 }
@@ -112,12 +105,12 @@ function move(){
  dir.normalize();
  dir.applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
 
- const nx = camera.position.x + dir.x*speed;
- const nz = camera.position.z + dir.z*speed;
+ const nx=camera.position.x+dir.x*speed;
+ const nz=camera.position.z+dir.z*speed;
 
  if(canMove(nx,nz)){
-  camera.position.x = nx;
-  camera.position.z = nz;
+  camera.position.x=nx;
+  camera.position.z=nz;
  }
 }
 
@@ -128,8 +121,8 @@ function animate(){
  checkGoal();
 
  camera.rotation.order="YXZ";
- camera.rotation.y = yaw;
- camera.rotation.x = pitch;
+ camera.rotation.y=yaw;
+ camera.rotation.x=pitch;
 
  renderer.render(scene,camera);
 }
