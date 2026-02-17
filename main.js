@@ -1,7 +1,7 @@
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0b0f14);
 
-const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
+const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 2000);
 
 const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth, innerHeight);
@@ -13,145 +13,184 @@ window.addEventListener("resize",()=>{
  renderer.setSize(innerWidth,innerHeight);
 });
 
-scene.add(new THREE.AmbientLight(0xffffff,0.5));
+scene.add(new THREE.AmbientLight(0xffffff,0.55));
 
-const light = new THREE.PointLight(0xffffff,1.4,200);
-light.position.set(8,10,8);
+const light = new THREE.PointLight(0xffffff,1.3,400);
+light.position.set(40,35,40);
 scene.add(light);
 
 const loader = new THREE.TextureLoader();
-
 const floorTex = loader.load("https://threejs.org/examples/textures/brick_diffuse.jpg");
 floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
-floorTex.repeat.set(20,20);
+floorTex.repeat.set(60,60);
 
 const wallTex = loader.load("https://threejs.org/examples/textures/brick_bump.jpg");
 wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
 wallTex.repeat.set(1,1);
 
+// Bigger maze (handmade but larger)
 const maze = [
- [1,1,1,1,1,1,1,1],
- [1,0,0,0,0,0,0,1],
- [1,0,1,1,1,1,0,1],
- [1,0,0,0,0,1,0,1],
- [1,1,1,1,0,1,0,1],
- [1,0,0,1,0,0,0,1],
- [1,0,0,0,0,1,0,1],
- [1,1,1,1,1,1,1,1]
+ [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+ [1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
+ [1,0,1,1,1,1,0,1,0,1,1,1,1,1,0,1],
+ [1,0,1,0,0,1,0,0,0,1,0,0,0,1,0,1],
+ [1,0,1,0,1,1,1,1,0,1,0,1,0,1,0,1],
+ [1,0,0,0,0,0,0,1,0,1,0,1,0,0,0,1],
+ [1,1,1,1,1,1,0,1,0,1,0,1,1,1,0,1],
+ [1,0,0,0,0,1,0,0,0,0,0,0,0,1,0,1],
+ [1,0,1,1,0,1,1,1,1,1,1,1,0,1,0,1],
+ [1,0,1,0,0,0,0,0,0,0,0,1,0,1,0,1],
+ [1,0,1,0,1,1,1,1,1,1,0,1,0,1,0,1],
+ [1,0,0,0,1,0,0,0,0,1,0,0,0,1,0,1],
+ [1,1,1,0,1,0,1,1,0,1,1,1,0,1,0,1],
+ [1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,1],
+ [1,0,1,1,1,0,1,0,1,1,0,1,1,1,0,1],
+ [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
 ];
 
 const SCALE = 4;
-const SIZE = maze.length * SCALE;
+const WALL_H = 3;
+
+const W = maze[0].length;
+const H = maze.length;
 
 const floor = new THREE.Mesh(
- new THREE.PlaneGeometry(SIZE,SIZE),
- new THREE.MeshStandardMaterial({
-  map: floorTex,
-  roughness:1
- })
+ new THREE.PlaneGeometry(W*SCALE, H*SCALE),
+ new THREE.MeshStandardMaterial({map: floorTex, roughness:1})
 );
 floor.rotation.x = -Math.PI/2;
-floor.position.set(SIZE/2-SCALE/2,0,SIZE/2-SCALE/2);
+floor.position.set((W-1)*SCALE/2,0,(H-1)*SCALE/2);
 scene.add(floor);
 
-const walls=[];
+const wallMat = new THREE.MeshStandardMaterial({map: wallTex, roughness:0.75});
+const walls = [];
 
-maze.forEach((row,z)=>{
- row.forEach((cell,x)=>{
-  if(cell){
-   const geo = new THREE.BoxGeometry(SCALE,3,SCALE);
-   const mat = new THREE.MeshStandardMaterial({
-    map: wallTex,
-    roughness:0.7
-   });
-   const wall = new THREE.Mesh(geo,mat);
-   wall.position.set(x*SCALE,1.5,z*SCALE);
+for(let z=0; z<H; z++){
+ for(let x=0; x<W; x++){
+  if(maze[z][x]===1){
+   const wall = new THREE.Mesh(
+    new THREE.BoxGeometry(SCALE, WALL_H, SCALE),
+    wallMat
+   );
+   wall.position.set(x*SCALE, WALL_H/2, z*SCALE);
    scene.add(wall);
    walls.push(wall);
-
-   const edges = new THREE.LineSegments(
-    new THREE.EdgesGeometry(geo),
-    new THREE.LineBasicMaterial({color:0x000000})
-   );
-   edges.position.copy(wall.position);
-   scene.add(edges);
   }
- });
-});
+ }
+}
 
+// Goal "breathing" orb
 const goal = new THREE.Mesh(
- new THREE.IcosahedronGeometry(1,0),
- new THREE.MeshStandardMaterial({color:0xffcc00, emissive:0xaa7700})
+ new THREE.SphereGeometry(1.1, 24, 24),
+ new THREE.MeshStandardMaterial({color:0xffcc33, emissive:0x553300, roughness:0.2, metalness:0.1})
 );
-goal.position.set(6*SCALE,1,6*SCALE);
+goal.position.set((W-2)*SCALE, 1.1, (H-2)*SCALE);
 scene.add(goal);
 
-camera.position.set(3*SCALE,1.8,3*SCALE);
+camera.position.set(1.5*SCALE, 1.8, 1.5*SCALE);
 
-const keys={};
-document.addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
-document.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+// Input
+const keys = Object.create(null);
+function clearKeys(){ for(const k in keys) delete keys[k]; }
+document.addEventListener("keydown", e => { keys[e.key.toLowerCase()] = true; });
+document.addEventListener("keyup", e => { keys[e.key.toLowerCase()] = false; });
 
-let yaw=0,pitch=0;
-
-document.body.addEventListener("mousemove",e=>{
+let yaw=0, pitch=0;
+document.body.addEventListener("mousemove", e=>{
  if(document.pointerLockElement===document.body){
   yaw -= e.movementX*0.002;
   pitch -= e.movementY*0.002;
-  pitch=Math.max(-Math.PI/2,Math.min(Math.PI/2,pitch));
+  pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
  }
 });
-document.body.addEventListener("click",()=>document.body.requestPointerLock());
+document.body.addEventListener("click", ()=>document.body.requestPointerLock());
+
+// Collision with player radius
+const PLAYER_R = 0.8;
 
 function canMove(x,z){
  for(const w of walls){
-  if(Math.abs(w.position.x-x)<SCALE*0.5 &&
-     Math.abs(w.position.z-z)<SCALE*0.5){
+  const dx = Math.abs(w.position.x - x);
+  const dz = Math.abs(w.position.z - z);
+  if(dx < (SCALE/2 + PLAYER_R) && dz < (SCALE/2 + PLAYER_R)){
    return false;
   }
  }
  return true;
 }
 
-function move(){
- const speed=0.15;
- const forward = new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw));
- const right = new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+// Footsteps (WebAudio, tiny synth click)
+let audioCtx = null;
+function stepSound(){
+ if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+ const o = audioCtx.createOscillator();
+ const g = audioCtx.createGain();
+ o.type = "square";
+ o.frequency.value = 140 + Math.random()*25;
+ g.gain.value = 0.03;
+ o.connect(g); g.connect(audioCtx.destination);
+ o.start();
+ o.stop(audioCtx.currentTime + 0.03);
+}
 
- let nx=camera.position.x;
- let nz=camera.position.z;
+let lastStepT = 0;
 
- if(keys["w"]){ nx+=forward.x*speed; nz+=forward.z*speed; }
- if(keys["s"]){ nx-=forward.x*speed; nz-=forward.z*speed; }
- if(keys["a"]){ nx-=right.x*speed; nz-=right.z*speed; }
- if(keys["d"]){ nx+=right.x*speed; nz+=right.z*speed; }
+function move(t){
+ const speed = 0.18;
 
- if(canMove(nx,nz)){
-  camera.position.x=nx;
-  camera.position.z=nz;
+ // FIX: forward should be -Z in camera space, so use (-cos) for z when yaw=0
+ const forward = new THREE.Vector3(Math.sin(yaw), 0, -Math.cos(yaw));
+ const right   = new THREE.Vector3(Math.cos(yaw), 0,  Math.sin(yaw));
+
+ let vx = 0, vz = 0;
+
+ if(keys["w"]) { vx += forward.x; vz += forward.z; }
+ if(keys["s"]) { vx -= forward.x; vz -= forward.z; }
+ if(keys["a"]) { vx -= right.x;   vz -= right.z; }
+ if(keys["d"]) { vx += right.x;   vz += right.z; }
+
+ const len = Math.hypot(vx,vz);
+ if(len > 0){
+  vx /= len; vz /= len;
+
+  const nx = camera.position.x + vx*speed;
+  const nz = camera.position.z + vz*speed;
+
+  if(canMove(nx, camera.position.z)) camera.position.x = nx;
+  if(canMove(camera.position.x, nz)) camera.position.z = nz;
+
+  if(t - lastStepT > 220){
+   stepSound();
+   lastStepT = t;
+  }
  }
 }
 
 function checkGoal(){
- const dx=camera.position.x-goal.position.x;
- const dz=camera.position.z-goal.position.z;
- if(Math.sqrt(dx*dx+dz*dz)<1.5){
+ const dx = camera.position.x - goal.position.x;
+ const dz = camera.position.z - goal.position.z;
+ if(Math.sqrt(dx*dx + dz*dz) < 2.0){
   alert("Maze cleared");
-  camera.position.set(3*SCALE,1.8,3*SCALE);
+  clearKeys();
+  camera.position.set(1.5*SCALE, 1.8, 1.5*SCALE);
  }
 }
 
-function animate(){
+function animate(t){
  requestAnimationFrame(animate);
 
- move();
+ // breathing orb
+ const s = 1 + 0.08*Math.sin(t*0.004);
+ goal.scale.set(s,s,s);
+
+ move(t);
  checkGoal();
 
  camera.rotation.order="YXZ";
- camera.rotation.y=yaw;
- camera.rotation.x=pitch;
+ camera.rotation.y = yaw;
+ camera.rotation.x = pitch;
 
- renderer.render(scene,camera);
+ renderer.render(scene, camera);
 }
-animate();
+requestAnimationFrame(animate);
 
