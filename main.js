@@ -13,9 +13,9 @@ window.addEventListener("resize",()=>{
  renderer.setSize(innerWidth,innerHeight);
 });
 
-scene.add(new THREE.AmbientLight(0xffffff,0.55));
-const light = new THREE.PointLight(0xffffff,1.4,500);
-light.position.set(50,60,50);
+scene.add(new THREE.AmbientLight(0xffffff,0.6));
+const light = new THREE.PointLight(0xffffff,1.3,500);
+light.position.set(40,60,40);
 scene.add(light);
 
 // textures
@@ -24,7 +24,7 @@ const floorTex = loader.load("assets/floor.jpg");
 floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
 floorTex.repeat.set(40,40);
 
-const wallTex = loader.load("https://threejs.org/examples/textures/brick_bump.jpg");
+const wallTex = loader.load("https://threejs.org/examples/textures/brick_diffuse.jpg");
 wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
 
 // maze
@@ -79,7 +79,7 @@ for(let z=0;z<H;z++){
  }
 }
 
-// goal orb
+// goal
 const goal=new THREE.Mesh(
  new THREE.SphereGeometry(1.2,32,32),
  new THREE.MeshStandardMaterial({color:0xffcc33,emissive:0x663300})
@@ -118,36 +118,53 @@ function canMove(x,z){
  return true;
 }
 
-// sound
-const stepAudio=new Audio("assets/step.wav");
+// fallback procedural step sound
+let audioCtx=null;
+function stepSound(){
+ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+ const o=audioCtx.createOscillator();
+ const g=audioCtx.createGain();
+ o.type="triangle";
+ o.frequency.value=180+Math.random()*40;
+ g.gain.value=0.04;
+ o.connect(g);
+ g.connect(audioCtx.destination);
+ o.start();
+ o.stop(audioCtx.currentTime+0.04);
+}
+
 let lastStep=0;
 
-// movement
+// movement FIXED
 function move(t){
- const speed=0.2;
-
- const forward=new THREE.Vector3(Math.sin(yaw),0,-Math.cos(yaw));
- const right=new THREE.Vector3(Math.cos(yaw),0,Math.sin(yaw));
+ const speed=0.18;
 
  let vx=0,vz=0;
- if(keys["w"]){vx+=forward.x;vz+=forward.z;}
- if(keys["s"]){vx-=forward.x;vz-=forward.z;}
- if(keys["a"]){vx-=right.x;vz-=right.z;}
- if(keys["d"]){vx+=right.x;vz+=right.z;}
 
- const len=Math.hypot(vx,vz);
- if(len>0){
-  vx/=len;vz/=len;
+ if(keys["w"]) vz-=1;
+ if(keys["s"]) vz+=1;
+ if(keys["a"]) vx-=1;
+ if(keys["d"]) vx+=1;
 
-  const nx=camera.position.x+vx*speed;
-  const nz=camera.position.z+vz*speed;
+ if(vx!==0||vz!==0){
+  const len=Math.hypot(vx,vz);
+  vx/=len;
+  vz/=len;
+
+  const sin=Math.sin(yaw);
+  const cos=Math.cos(yaw);
+
+  const dx = vx*cos - vz*sin;
+  const dz = vz*cos + vx*sin;
+
+  const nx=camera.position.x+dx*speed;
+  const nz=camera.position.z+dz*speed;
 
   if(canMove(nx,camera.position.z)) camera.position.x=nx;
   if(canMove(camera.position.x,nz)) camera.position.z=nz;
 
-  if(t-lastStep>300){
-   stepAudio.currentTime=0;
-   stepAudio.play();
+  if(t-lastStep>250){
+   stepSound();
    lastStep=t;
   }
  }
