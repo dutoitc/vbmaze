@@ -1,4 +1,4 @@
-const VERSION = "v0.4";
+const VERSION = "v0.5";
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0e1217);
@@ -17,6 +17,15 @@ label.style.color="#fff";
 label.style.fontFamily="monospace";
 label.textContent=VERSION;
 document.body.appendChild(label);
+
+const hint = document.createElement("div");
+hint.style.position="fixed";
+hint.style.top="10px";
+hint.style.left="10px";
+hint.style.color="#fff";
+hint.style.fontFamily="Arial";
+hint.textContent="WASD (or ZQSD) = move | Mouse = look | Click to lock";
+document.body.appendChild(hint);
 
 window.addEventListener("resize",()=>{
  camera.aspect = innerWidth/innerHeight;
@@ -101,10 +110,18 @@ scene.add(goal);
 // spawn
 camera.position.set(1.5*SCALE,1.8,1.5*SCALE);
 
-// input
-const keys={};
-document.addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
-document.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+// keyboard (use e.code, works across layouts)
+const pressed = new Set();
+function clearPressed(){ pressed.clear(); }
+
+window.addEventListener("keydown",(e)=>{
+ pressed.add(e.code);
+ // avoid page scroll etc.
+ if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) e.preventDefault();
+},{passive:false});
+
+window.addEventListener("keyup",(e)=>pressed.delete(e.code));
+window.addEventListener("blur",()=>clearPressed());
 
 // mouse
 let yaw=0,pitch=0;
@@ -128,14 +145,14 @@ function canMove(x,z){
  return true;
 }
 
-// sound
+// step sound (procedural)
 let audioCtx=null;
 function stepSound(){
  if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
  const o=audioCtx.createOscillator();
  const g=audioCtx.createGain();
  o.type="triangle";
- o.frequency.value=160+Math.random()*30;
+ o.frequency.value=155+Math.random()*35;
  g.gain.value=0.05;
  o.connect(g);
  g.connect(audioCtx.destination);
@@ -144,13 +161,19 @@ function stepSound(){
 }
 let lastStep=0;
 
-// MOVEMENT DEFINITIF
+// movement
 function move(t){
  let vx=0,vz=0;
- if(keys["w"]) vz-=1;
- if(keys["s"]) vz+=1;
- if(keys["a"]) vx-=1;
- if(keys["d"]) vx+=1;
+
+ const forward = pressed.has("KeyW") || pressed.has("KeyZ") || pressed.has("ArrowUp");
+ const back    = pressed.has("KeyS") || pressed.has("ArrowDown");
+ const left    = pressed.has("KeyA") || pressed.has("KeyQ") || pressed.has("ArrowLeft");
+ const right   = pressed.has("KeyD") || pressed.has("ArrowRight");
+
+ if(forward) vz-=1;
+ if(back)    vz+=1;
+ if(left)    vx-=1;
+ if(right)   vx+=1;
 
  if(vx||vz){
   const len=Math.hypot(vx,vz);
@@ -183,6 +206,7 @@ function checkGoal(){
  const dz=camera.position.z-goal.position.z;
  if(Math.sqrt(dx*dx+dz*dz)<2){
   alert("Maze cleared");
+  clearPressed();
   camera.position.set(1.5*SCALE,1.8,1.5*SCALE);
  }
 }
@@ -203,5 +227,4 @@ function animate(t){
  renderer.render(scene,camera);
 }
 requestAnimationFrame(animate);
-
 
