@@ -1,4 +1,4 @@
-const VERSION = "v0.5";
+const VERSION = "v0.6";
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0e1217);
@@ -24,7 +24,7 @@ hint.style.top="10px";
 hint.style.left="10px";
 hint.style.color="#fff";
 hint.style.fontFamily="Arial";
-hint.textContent="WASD (or ZQSD) = move | Mouse = look | Click to lock";
+hint.textContent="WASD / ZQSD = move | Mouse = look | Click = lock";
 document.body.appendChild(hint);
 
 window.addEventListener("resize",()=>{
@@ -38,8 +38,8 @@ const light = new THREE.PointLight(0xffffff,1.3,500);
 light.position.set(40,60,40);
 scene.add(light);
 
-// textures
 const loader = new THREE.TextureLoader();
+
 const floorTex = loader.load("assets/floor.jpg");
 floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
 floorTex.repeat.set(40,40);
@@ -47,7 +47,6 @@ floorTex.repeat.set(40,40);
 const wallTex = loader.load("https://threejs.org/examples/textures/brick_diffuse.jpg");
 wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
 
-// maze
 const maze = [
  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
  [1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
@@ -72,7 +71,6 @@ const WALL_H=3;
 const W=maze[0].length;
 const H=maze.length;
 
-// floor
 const floor = new THREE.Mesh(
  new THREE.PlaneGeometry(W*SCALE,H*SCALE),
  new THREE.MeshStandardMaterial({map:floorTex})
@@ -81,7 +79,6 @@ floor.rotation.x=-Math.PI/2;
 floor.position.set((W-1)*SCALE/2,0,(H-1)*SCALE/2);
 scene.add(floor);
 
-// walls
 const walls=[];
 const wallMat = new THREE.MeshStandardMaterial({map:wallTex});
 
@@ -99,7 +96,6 @@ for(let z=0;z<H;z++){
  }
 }
 
-// goal
 const goal=new THREE.Mesh(
  new THREE.SphereGeometry(1.2,32,32),
  new THREE.MeshStandardMaterial({color:0xffcc33,emissive:0x663300})
@@ -107,23 +103,13 @@ const goal=new THREE.Mesh(
 goal.position.set((W-2)*SCALE,1.2,(H-2)*SCALE);
 scene.add(goal);
 
-// spawn
 camera.position.set(1.5*SCALE,1.8,1.5*SCALE);
 
-// keyboard (use e.code, works across layouts)
-const pressed = new Set();
-function clearPressed(){ pressed.clear(); }
+const pressed=new Set();
+window.addEventListener("keydown",e=>pressed.add(e.code));
+window.addEventListener("keyup",e=>pressed.delete(e.code));
+window.addEventListener("blur",()=>pressed.clear());
 
-window.addEventListener("keydown",(e)=>{
- pressed.add(e.code);
- // avoid page scroll etc.
- if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) e.preventDefault();
-},{passive:false});
-
-window.addEventListener("keyup",(e)=>pressed.delete(e.code));
-window.addEventListener("blur",()=>clearPressed());
-
-// mouse
 let yaw=0,pitch=0;
 document.body.addEventListener("mousemove",e=>{
  if(document.pointerLockElement===document.body){
@@ -134,50 +120,49 @@ document.body.addEventListener("mousemove",e=>{
 });
 document.body.addEventListener("click",()=>document.body.requestPointerLock());
 
-// collision
-const PLAYER_R=0.8;
+const PLAYER_R=0.4;
+
 function canMove(x,z){
  for(const w of walls){
-  const dx=Math.abs(w.position.x-x);
-  const dz=Math.abs(w.position.z-z);
-  if(dx<(SCALE/2+PLAYER_R)&&dz<(SCALE/2+PLAYER_R)) return false;
+  const dx=x-w.position.x;
+  const dz=z-w.position.z;
+  const distX=Math.abs(dx);
+  const distZ=Math.abs(dz);
+
+  if(distX<(SCALE/2+PLAYER_R) && distZ<(SCALE/2+PLAYER_R)){
+   return false;
+  }
  }
  return true;
 }
 
-// step sound (procedural)
 let audioCtx=null;
 function stepSound(){
- if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+ if(!audioCtx) audioCtx=new AudioContext();
  const o=audioCtx.createOscillator();
  const g=audioCtx.createGain();
- o.type="triangle";
- o.frequency.value=155+Math.random()*35;
- g.gain.value=0.05;
+ o.frequency.value=180+Math.random()*40;
+ g.gain.value=0.03;
  o.connect(g);
  g.connect(audioCtx.destination);
  o.start();
- o.stop(audioCtx.currentTime+0.04);
+ o.stop(audioCtx.currentTime+0.05);
 }
+
 let lastStep=0;
 
-// movement
 function move(t){
  let vx=0,vz=0;
 
- const forward = pressed.has("KeyW") || pressed.has("KeyZ") || pressed.has("ArrowUp");
- const back    = pressed.has("KeyS") || pressed.has("ArrowDown");
- const left    = pressed.has("KeyA") || pressed.has("KeyQ") || pressed.has("ArrowLeft");
- const right   = pressed.has("KeyD") || pressed.has("ArrowRight");
-
- if(forward) vz-=1;
- if(back)    vz+=1;
- if(left)    vx-=1;
- if(right)   vx+=1;
+ if(pressed.has("KeyW")||pressed.has("KeyZ")) vz-=1;
+ if(pressed.has("KeyS")) vz+=1;
+ if(pressed.has("KeyA")||pressed.has("KeyQ")) vx-=1;
+ if(pressed.has("KeyD")) vx+=1;
 
  if(vx||vz){
   const len=Math.hypot(vx,vz);
-  vx/=len; vz/=len;
+  vx/=len;
+  vz/=len;
 
   const sin=Math.sin(yaw);
   const cos=Math.cos(yaw);
@@ -185,7 +170,7 @@ function move(t){
   const dx = vx*cos - vz*sin;
   const dz = vz*cos + vx*sin;
 
-  const speed=0.22;
+  const speed=0.15;
 
   const nx=camera.position.x+dx*speed;
   const nz=camera.position.z+dz*speed;
@@ -193,20 +178,19 @@ function move(t){
   if(canMove(nx,camera.position.z)) camera.position.x=nx;
   if(canMove(camera.position.x,nz)) camera.position.z=nz;
 
-  if(t-lastStep>240){
+  if(t-lastStep>260){
    stepSound();
    lastStep=t;
   }
  }
 }
 
-// goal
 function checkGoal(){
  const dx=camera.position.x-goal.position.x;
  const dz=camera.position.z-goal.position.z;
  if(Math.sqrt(dx*dx+dz*dz)<2){
   alert("Maze cleared");
-  clearPressed();
+  pressed.clear();
   camera.position.set(1.5*SCALE,1.8,1.5*SCALE);
  }
 }
@@ -214,8 +198,7 @@ function checkGoal(){
 function animate(t){
  requestAnimationFrame(animate);
 
- const s=1+Math.sin(t*0.004)*0.08;
- goal.scale.set(s,s,s);
+ goal.scale.setScalar(1+Math.sin(t*0.004)*0.08);
 
  move(t);
  checkGoal();
