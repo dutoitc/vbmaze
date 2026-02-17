@@ -1,10 +1,10 @@
-const VERSION="v0.9-debug";
+const VERSION="v1.0";
 
 // ===== CONFIG =====
 const SCALE=4;
 const SPEED=3;
 const MOUSE=0.002;
-const PLAYER_RADIUS=0.6;
+const PLAYER_RADIUS=0.4;
 
 // ===== UI =====
 const label=document.createElement("div");
@@ -89,15 +89,8 @@ camera.position.set(sp.x,1.7,sp.z);
 
 // ===== INPUT =====
 const keys={};
-
-addEventListener("keydown",e=>{
- keys[e.key.toLowerCase()]=true;
- console.log("KEYDOWN",e.key);
-});
-
-addEventListener("keyup",e=>{
- keys[e.key.toLowerCase()]=false;
-});
+addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
+addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 
 // ===== MOUSE =====
 let yaw=0;
@@ -117,7 +110,7 @@ addEventListener("mousemove",e=>{
  camera.rotation.x=pitch;
 });
 
-// ===== COLLISION =====
+// ===== COLLISION (FIXED) =====
 function wallAt(x,z){
  const gx=Math.floor(x/SCALE);
  const gz=Math.floor(z/SCALE);
@@ -126,7 +119,14 @@ function wallAt(x,z){
 }
 
 function canMove(x,z){
- return !wallAt(x,z);
+
+ // test 4 coins du joueur
+ return !(
+  wallAt(x-PLAYER_RADIUS,z-PLAYER_RADIUS)||
+  wallAt(x+PLAYER_RADIUS,z-PLAYER_RADIUS)||
+  wallAt(x-PLAYER_RADIUS,z+PLAYER_RADIUS)||
+  wallAt(x+PLAYER_RADIUS,z+PLAYER_RADIUS)
+ );
 }
 
 // ===== SOUND =====
@@ -139,12 +139,11 @@ function move(){
 
  const dt=clock.getDelta();
 
- let f=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0);
+ // inversion corrigée ici ↓↓↓
+ let f=(keys.s||keys.arrowdown?1:0)-(keys.w||keys.arrowup?1:0);
  let s=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);
 
  if(f===0 && s===0) return;
-
- console.log("INPUT",f,s);
 
  const forward=new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw));
  const right=new THREE.Vector3(forward.z,0,-forward.x);
@@ -152,15 +151,10 @@ function move(){
  const move=new THREE.Vector3();
  move.addScaledVector(forward,f);
  move.addScaledVector(right,s);
-
- if(move.length()===0) return;
-
  move.normalize();
 
  const nx=camera.position.x + move.x*SPEED*dt;
  const nz=camera.position.z + move.z*SPEED*dt;
-
- console.log("TRY",nx,nz);
 
  if(canMove(nx,nz)){
   camera.position.x=nx;
