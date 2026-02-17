@@ -1,12 +1,12 @@
-const VERSION="v1.0";
+const VERSION="v0.10-debug";
 
 // ===== CONFIG =====
 const SCALE=4;
 const SPEED=3;
 const MOUSE=0.002;
-const PLAYER_RADIUS=0.4;
+const PLAYER_RADIUS=0.35;
 
-// ===== UI =====
+// ===== LABEL =====
 const label=document.createElement("div");
 label.style.position="fixed";
 label.style.top="5px";
@@ -26,7 +26,7 @@ renderer.setSize(innerWidth,innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // ===== LIGHT =====
-scene.add(new THREE.AmbientLight(0xffffff,0.5));
+scene.add(new THREE.AmbientLight(0xffffff,0.6));
 const dl=new THREE.DirectionalLight(0xffffff,0.7);
 dl.position.set(10,20,10);
 scene.add(dl);
@@ -89,8 +89,16 @@ camera.position.set(sp.x,1.7,sp.z);
 
 // ===== INPUT =====
 const keys={};
-addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
-addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+
+addEventListener("keydown",e=>{
+ keys[e.key.toLowerCase()]=true;
+ console.log("DOWN",e.key);
+});
+
+addEventListener("keyup",e=>{
+ keys[e.key.toLowerCase()]=false;
+ console.log("UP",e.key);
+});
 
 // ===== MOUSE =====
 let yaw=0;
@@ -110,7 +118,7 @@ addEventListener("mousemove",e=>{
  camera.rotation.x=pitch;
 });
 
-// ===== COLLISION (FIXED) =====
+// ===== COLLISION =====
 function wallAt(x,z){
  const gx=Math.floor(x/SCALE);
  const gz=Math.floor(z/SCALE);
@@ -119,8 +127,6 @@ function wallAt(x,z){
 }
 
 function canMove(x,z){
-
- // test 4 coins du joueur
  return !(
   wallAt(x-PLAYER_RADIUS,z-PLAYER_RADIUS)||
   wallAt(x+PLAYER_RADIUS,z-PLAYER_RADIUS)||
@@ -129,9 +135,6 @@ function canMove(x,z){
  );
 }
 
-// ===== SOUND =====
-const step=new Audio("https://cdn.jsdelivr.net/gh/jshawl/AudioFX/footstep.wav");
-
 // ===== LOOP =====
 const clock=new THREE.Clock();
 
@@ -139,9 +142,22 @@ function move(){
 
  const dt=clock.getDelta();
 
- // inversion corrigée ici ↓↓↓
- let f=(keys.s||keys.arrowdown?1:0)-(keys.w||keys.arrowup?1:0);
- let s=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);
+ const forwardKey =
+ keys.w||keys.z||keys.arrowup;
+
+ const backKey =
+ keys.s||keys.arrowdown;
+
+ const leftKey =
+ keys.a||keys.q||keys.arrowleft;
+
+ const rightKey =
+ keys.d||keys.arrowright;
+
+ let f = (forwardKey?1:0) - (backKey?1:0);
+ let s = (rightKey?1:0) - (leftKey?1:0);
+
+ console.log("INPUT",f,s);
 
  if(f===0 && s===0) return;
 
@@ -151,19 +167,25 @@ function move(){
  const move=new THREE.Vector3();
  move.addScaledVector(forward,f);
  move.addScaledVector(right,s);
+
+ if(move.lengthSq()===0){
+ console.log("ZERO VECTOR");
+ return;
+ }
+
  move.normalize();
 
  const nx=camera.position.x + move.x*SPEED*dt;
  const nz=camera.position.z + move.z*SPEED*dt;
 
- if(canMove(nx,nz)){
-  camera.position.x=nx;
-  camera.position.z=nz;
+ console.log("TRY",nx,nz);
 
-  if(step.paused){
-   step.currentTime=0;
-   step.play().catch(()=>{});
-  }
+ if(canMove(nx,nz)){
+ camera.position.x=nx;
+ camera.position.z=nz;
+ console.log("MOVE OK");
+ }else{
+ console.log("BLOCKED");
  }
 }
 
