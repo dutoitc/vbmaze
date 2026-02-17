@@ -1,4 +1,4 @@
-const VERSION = "v0.6";
+const VERSION = "v0.7-debug";
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0e1217);
@@ -9,7 +9,7 @@ const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth, innerHeight);
 document.body.appendChild(renderer.domElement);
 
-const label = document.createElement("div");
+const label=document.createElement("div");
 label.style.position="fixed";
 label.style.bottom="10px";
 label.style.right="10px";
@@ -18,60 +18,42 @@ label.style.fontFamily="monospace";
 label.textContent=VERSION;
 document.body.appendChild(label);
 
-const hint = document.createElement("div");
-hint.style.position="fixed";
-hint.style.top="10px";
-hint.style.left="10px";
-hint.style.color="#fff";
-hint.style.fontFamily="Arial";
-hint.textContent="WASD / ZQSD = move | Mouse = look | Click = lock";
-document.body.appendChild(hint);
-
 window.addEventListener("resize",()=>{
- camera.aspect = innerWidth/innerHeight;
+ camera.aspect=innerWidth/innerHeight;
  camera.updateProjectionMatrix();
  renderer.setSize(innerWidth,innerHeight);
 });
 
-scene.add(new THREE.AmbientLight(0xffffff,0.6));
-const light = new THREE.PointLight(0xffffff,1.3,500);
+scene.add(new THREE.AmbientLight(0xffffff,0.7));
+const light=new THREE.PointLight(0xffffff,1.4,500);
 light.position.set(40,60,40);
 scene.add(light);
 
-const loader = new THREE.TextureLoader();
+const loader=new THREE.TextureLoader();
 
-const floorTex = loader.load("assets/floor.jpg");
-floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
+const floorTex=loader.load("assets/floor.jpg");
+floorTex.wrapS=floorTex.wrapT=THREE.RepeatWrapping;
 floorTex.repeat.set(40,40);
 
-const wallTex = loader.load("https://threejs.org/examples/textures/brick_diffuse.jpg");
-wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
+const wallTex=loader.load("https://threejs.org/examples/textures/brick_diffuse.jpg");
+wallTex.wrapS=wallTex.wrapT=THREE.RepeatWrapping;
 
-const maze = [
- [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
- [1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
- [1,0,1,1,1,1,0,1,0,1,1,1,1,1,0,1],
- [1,0,1,0,0,1,0,0,0,1,0,0,0,1,0,1],
- [1,0,1,0,1,1,1,1,0,1,0,1,0,1,0,1],
- [1,0,0,0,0,0,0,1,0,1,0,1,0,0,0,1],
- [1,1,1,1,1,1,0,1,0,1,0,1,1,1,0,1],
- [1,0,0,0,0,1,0,0,0,0,0,0,0,1,0,1],
- [1,0,1,1,0,1,1,1,1,1,1,1,0,1,0,1],
- [1,0,1,0,0,0,0,0,0,0,0,1,0,1,0,1],
- [1,0,1,0,1,1,1,1,1,1,0,1,0,1,0,1],
- [1,0,0,0,1,0,0,0,0,1,0,0,0,1,0,1],
- [1,1,1,0,1,0,1,1,0,1,1,1,0,1,0,1],
- [1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,1],
- [1,0,1,1,1,0,1,0,1,1,0,1,1,1,0,1],
- [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+const maze=[
+ [1,1,1,1,1,1,1,1],
+ [1,0,0,0,0,0,0,1],
+ [1,0,1,1,1,1,0,1],
+ [1,0,0,0,0,1,0,1],
+ [1,1,1,1,0,1,0,1],
+ [1,0,0,1,0,0,0,1],
+ [1,0,0,0,0,1,0,1],
+ [1,1,1,1,1,1,1,1]
 ];
 
-const SCALE=4;
-const WALL_H=3;
+const SCALE=6;
 const W=maze[0].length;
 const H=maze.length;
 
-const floor = new THREE.Mesh(
+const floor=new THREE.Mesh(
  new THREE.PlaneGeometry(W*SCALE,H*SCALE),
  new THREE.MeshStandardMaterial({map:floorTex})
 );
@@ -80,37 +62,40 @@ floor.position.set((W-1)*SCALE/2,0,(H-1)*SCALE/2);
 scene.add(floor);
 
 const walls=[];
-const wallMat = new THREE.MeshStandardMaterial({map:wallTex});
+const wallMat=new THREE.MeshStandardMaterial({map:wallTex});
 
 for(let z=0;z<H;z++){
  for(let x=0;x<W;x++){
   if(maze[z][x]){
    const wall=new THREE.Mesh(
-    new THREE.BoxGeometry(SCALE,WALL_H,SCALE),
+    new THREE.BoxGeometry(SCALE,4,SCALE),
     wallMat
    );
-   wall.position.set(x*SCALE,WALL_H/2,z*SCALE);
+   wall.position.set(x*SCALE,2,z*SCALE);
    scene.add(wall);
    walls.push(wall);
   }
  }
 }
 
-const goal=new THREE.Mesh(
- new THREE.SphereGeometry(1.2,32,32),
- new THREE.MeshStandardMaterial({color:0xffcc33,emissive:0x663300})
-);
-goal.position.set((W-2)*SCALE,1.2,(H-2)*SCALE);
-scene.add(goal);
-
-camera.position.set(1.5*SCALE,1.8,1.5*SCALE);
+camera.position.set(1.5*SCALE,2,1.5*SCALE);
 
 const pressed=new Set();
-window.addEventListener("keydown",e=>pressed.add(e.code));
-window.addEventListener("keyup",e=>pressed.delete(e.code));
+
+window.addEventListener("keydown",e=>{
+ pressed.add(e.code);
+ console.log("KEYDOWN",e.code);
+});
+
+window.addEventListener("keyup",e=>{
+ pressed.delete(e.code);
+ console.log("KEYUP",e.code);
+});
+
 window.addEventListener("blur",()=>pressed.clear());
 
 let yaw=0,pitch=0;
+
 document.body.addEventListener("mousemove",e=>{
  if(document.pointerLockElement===document.body){
   yaw-=e.movementX*0.002;
@@ -118,48 +103,33 @@ document.body.addEventListener("mousemove",e=>{
   pitch=Math.max(-Math.PI/2,Math.min(Math.PI/2,pitch));
  }
 });
+
 document.body.addEventListener("click",()=>document.body.requestPointerLock());
 
-const PLAYER_R=0.4;
+const PLAYER_R=0.5;
 
 function canMove(x,z){
  for(const w of walls){
-  const dx=x-w.position.x;
-  const dz=z-w.position.z;
-  const distX=Math.abs(dx);
-  const distZ=Math.abs(dz);
-
-  if(distX<(SCALE/2+PLAYER_R) && distZ<(SCALE/2+PLAYER_R)){
+  const dx=Math.abs(x-w.position.x);
+  const dz=Math.abs(z-w.position.z);
+  if(dx<SCALE/2+PLAYER_R && dz<SCALE/2+PLAYER_R){
    return false;
   }
  }
  return true;
 }
 
-let audioCtx=null;
-function stepSound(){
- if(!audioCtx) audioCtx=new AudioContext();
- const o=audioCtx.createOscillator();
- const g=audioCtx.createGain();
- o.frequency.value=180+Math.random()*40;
- g.gain.value=0.03;
- o.connect(g);
- g.connect(audioCtx.destination);
- o.start();
- o.stop(audioCtx.currentTime+0.05);
-}
-
-let lastStep=0;
-
-function move(t){
+function move(){
  let vx=0,vz=0;
 
- if(pressed.has("KeyW")||pressed.has("KeyZ")) vz-=1;
- if(pressed.has("KeyS")) vz+=1;
- if(pressed.has("KeyA")||pressed.has("KeyQ")) vx-=1;
- if(pressed.has("KeyD")) vx+=1;
+ if(pressed.has("KeyW")||pressed.has("ArrowUp")) vz-=1;
+ if(pressed.has("KeyS")||pressed.has("ArrowDown")) vz+=1;
+ if(pressed.has("KeyA")||pressed.has("ArrowLeft")) vx-=1;
+ if(pressed.has("KeyD")||pressed.has("ArrowRight")) vx+=1;
 
  if(vx||vz){
+  console.log("MOVE VECTOR",vx,vz);
+
   const len=Math.hypot(vx,vz);
   vx/=len;
   vz/=len;
@@ -167,41 +137,25 @@ function move(t){
   const sin=Math.sin(yaw);
   const cos=Math.cos(yaw);
 
-  const dx = vx*cos - vz*sin;
-  const dz = vz*cos + vx*sin;
+  const dx=vx*cos - vz*sin;
+  const dz=vz*cos + vx*sin;
 
-  const speed=0.15;
+  const speed=0.2;
 
   const nx=camera.position.x+dx*speed;
   const nz=camera.position.z+dz*speed;
 
+  console.log("TRY MOVE",nx,nz);
+
   if(canMove(nx,camera.position.z)) camera.position.x=nx;
   if(canMove(camera.position.x,nz)) camera.position.z=nz;
-
-  if(t-lastStep>260){
-   stepSound();
-   lastStep=t;
-  }
  }
 }
 
-function checkGoal(){
- const dx=camera.position.x-goal.position.x;
- const dz=camera.position.z-goal.position.z;
- if(Math.sqrt(dx*dx+dz*dz)<2){
-  alert("Maze cleared");
-  pressed.clear();
-  camera.position.set(1.5*SCALE,1.8,1.5*SCALE);
- }
-}
-
-function animate(t){
+function animate(){
  requestAnimationFrame(animate);
 
- goal.scale.setScalar(1+Math.sin(t*0.004)*0.08);
-
- move(t);
- checkGoal();
+ move();
 
  camera.rotation.order="YXZ";
  camera.rotation.y=yaw;
@@ -209,5 +163,5 @@ function animate(t){
 
  renderer.render(scene,camera);
 }
-requestAnimationFrame(animate);
+animate();
 
