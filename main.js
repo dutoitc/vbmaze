@@ -1,3 +1,5 @@
+const VERSION = "v0.4";
+
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0e1217);
 
@@ -6,6 +8,15 @@ const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 2000
 const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth, innerHeight);
 document.body.appendChild(renderer.domElement);
+
+const label = document.createElement("div");
+label.style.position="fixed";
+label.style.bottom="10px";
+label.style.right="10px";
+label.style.color="#fff";
+label.style.fontFamily="monospace";
+label.textContent=VERSION;
+document.body.appendChild(label);
 
 window.addEventListener("resize",()=>{
  camera.aspect = innerWidth/innerHeight;
@@ -94,7 +105,6 @@ camera.position.set(1.5*SCALE,1.8,1.5*SCALE);
 const keys={};
 document.addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
 document.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
-function clearKeys(){for(const k in keys) delete keys[k];}
 
 // mouse
 let yaw=0,pitch=0;
@@ -118,38 +128,33 @@ function canMove(x,z){
  return true;
 }
 
-// fallback procedural step sound
+// sound
 let audioCtx=null;
 function stepSound(){
  if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
  const o=audioCtx.createOscillator();
  const g=audioCtx.createGain();
  o.type="triangle";
- o.frequency.value=180+Math.random()*40;
- g.gain.value=0.04;
+ o.frequency.value=160+Math.random()*30;
+ g.gain.value=0.05;
  o.connect(g);
  g.connect(audioCtx.destination);
  o.start();
  o.stop(audioCtx.currentTime+0.04);
 }
-
 let lastStep=0;
 
-// movement FIXED
+// MOVEMENT DEFINITIF
 function move(t){
- const speed=0.18;
-
  let vx=0,vz=0;
-
  if(keys["w"]) vz-=1;
  if(keys["s"]) vz+=1;
  if(keys["a"]) vx-=1;
  if(keys["d"]) vx+=1;
 
- if(vx!==0||vz!==0){
+ if(vx||vz){
   const len=Math.hypot(vx,vz);
-  vx/=len;
-  vz/=len;
+  vx/=len; vz/=len;
 
   const sin=Math.sin(yaw);
   const cos=Math.cos(yaw);
@@ -157,13 +162,15 @@ function move(t){
   const dx = vx*cos - vz*sin;
   const dz = vz*cos + vx*sin;
 
+  const speed=0.22;
+
   const nx=camera.position.x+dx*speed;
   const nz=camera.position.z+dz*speed;
 
   if(canMove(nx,camera.position.z)) camera.position.x=nx;
   if(canMove(camera.position.x,nz)) camera.position.z=nz;
 
-  if(t-lastStep>250){
+  if(t-lastStep>240){
    stepSound();
    lastStep=t;
   }
@@ -176,7 +183,6 @@ function checkGoal(){
  const dz=camera.position.z-goal.position.z;
  if(Math.sqrt(dx*dx+dz*dz)<2){
   alert("Maze cleared");
-  clearKeys();
   camera.position.set(1.5*SCALE,1.8,1.5*SCALE);
  }
 }
