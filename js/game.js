@@ -81,7 +81,7 @@ const Game = {
   /* ================= AUDIO ================= */
 
   initAudio() {
-    this.music = new Audio("../assets/maze1.wav");
+    this.music = new Audio("./assets/maze1.wav");
     this.music.loop = true;
     this.music.volume = 0.35;
   },
@@ -173,7 +173,7 @@ const Game = {
     const center = Maze.getCellCenter(4, 2, 0);
 
     const tex = new THREE.TextureLoader().load(
-      "../assets/wood.jpg",
+      "./assets/wood.jpg",
       (t) => {
         t.wrapS = THREE.RepeatWrapping;
         t.wrapT = THREE.RepeatWrapping;
@@ -229,7 +229,7 @@ const Game = {
 
   playDoorSound() {
     // petit son cléorte simple et stable (HTMLAudio)
-    const s = new Audio("../assets/step.wav");
+    const s = new Audio("./assets/step.wav");
     s.volume = 0.35;
     s.playbackRate = 0.75;
     s.play().catch(() => {});

@@ -31,10 +31,10 @@ export const Player = {
     this.camera = camera;
     this.camera.position.copy(this.spawnPos);
 
-    this.stepAudio = new Audio("../assets/step.wav");
+    this.stepAudio = new Audio("./assets/step.wav");
     this.stepAudio.volume = 0.5;
 
-    this.teleportAudio = new Audio("../assets/step.wav"); // réilise step si pas dautre son
+    this.teleportAudio = new Audio("./assets/step.wav"); // réilise step si pas dautre son
     this.teleportAudio.volume = 0.3;
     this.teleportAudio.playbackRate = 0.6;
 

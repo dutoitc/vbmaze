@@ -30,8 +30,8 @@ const Maze = {
 
     const texLoader = new THREE.TextureLoader();
 
-    const wallTex = texLoader.load("../assets/wood.jpg");
-    const floorTex = texLoader.load("../assets/floor.jpg");
+    const wallTex = texLoader.load("./assets/wood.jpg");
+    const floorTex = texLoader.load("./assets/floor.jpg");
 
     const wallMat = new THREE.MeshStandardMaterial({
       color: 0x777777,
